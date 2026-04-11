@@ -1,19 +1,46 @@
 name: Release
 
 on:
-  push:
-    branches: [master]
-    paths:
-      - "src/pycyphal2/__init__.py"
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
 
 jobs:
+  gate:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      should_release: ${{ steps.tip.outputs.should_release }}
+    steps:
+      - name: Verify tested commit is still the tip of the default branch
+        id: tip
+        env:
+          EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          ACTUAL_SHA=$(git ls-remote "https://github.com/$REPOSITORY" "refs/heads/$DEFAULT_BRANCH" | cut -f1)
+          if [ "$ACTUAL_SHA" = "$EXPECTED_SHA" ]; then
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          fi
+
   release:
+    needs: gate
+    if: needs.gate.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write      # for creating tags
       id-token: write      # for PyPI trusted publishing (OIDC)
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
 
       - uses: actions/setup-python@v6
         with:
