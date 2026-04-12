@@ -47,6 +47,14 @@ async def test_node_creation_and_home():
     node.close()
 
 
+async def test_node_exposes_transport_property():
+    net = MockNetwork()
+    tr = MockTransport(node_id=1, network=net)
+    node = new_node(tr, home="my_home")
+    assert node.transport is tr
+    node.close()
+
+
 async def test_node_namespace():
     """Namespace should affect name resolution."""
     net = MockNetwork()
@@ -121,7 +129,7 @@ async def test_pinned_topic():
 
     pub = node.advertise("/my/topic#42")
     topic = list(node.topics_by_name.values())[0]
-    assert topic.subject_id == 42
+    assert topic.subject_id(tr.subject_id_modulus) == 42
     assert topic.evictions == 0xFFFFFFFF - 42
 
     pub.close()
@@ -348,7 +356,7 @@ async def test_remap_advertise_pinned():
     pub = node.advertise("my/topic")
     topic = list(node.topics_by_name.values())[0]
     assert topic.name == "ns/remapped"
-    assert topic.subject_id == 42
+    assert topic.subject_id(tr.subject_id_modulus) == 42
 
     pub.close()
     node.close()
