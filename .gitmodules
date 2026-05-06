@@ -4,6 +4,3 @@
 [submodule "reference/libudpard"]
 	path = reference/libudpard
 	url = git@github.com:zhangjiwang2006/libudpard.git
-[submodule "reference/libcanard"]
-	path = reference/libcanard
-	url = git@github.com:zhangjiwang2006/libudpard.git
